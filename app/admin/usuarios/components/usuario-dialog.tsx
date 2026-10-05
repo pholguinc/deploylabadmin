@@ -14,7 +14,14 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { UserIcon, MailIcon, LockIcon, LoaderCircleIcon } from "lucide-react";
+import {
+  UserIcon,
+  MailIcon,
+  LockIcon,
+  LoaderCircleIcon,
+  EyeIcon,
+  EyeOffIcon,
+} from "lucide-react";
 import type { Usuario, UsuarioFormData } from "../interfaces/usuario.interface";
 import { createUser, updateUser } from "../services/usuarios.service";
 
@@ -28,6 +35,7 @@ interface UsuarioDialogProps {
 const getValidationSchema = (isEdit: boolean) =>
   Yup.object({
     name: Yup.string().trim().required("El nombre es requerido"),
+    lastname: Yup.string().trim().required("El apellido es requerido"),
     email: Yup.string()
       .trim()
       .email("Email inválido")
@@ -50,10 +58,12 @@ export function UsuarioDialog({
 }: UsuarioDialogProps) {
   const isEdit = !!usuario;
   const [apiError, setApiError] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
 
   const formik = useFormik<UsuarioFormData>({
     initialValues: {
       name: "",
+      lastname: "",
       email: "",
       roles: [],
       isActive: true,
@@ -81,11 +91,16 @@ export function UsuarioDialog({
 
   useEffect(() => {
     if (open) {
+      setShowPassword(false);
       if (usuario) {
         formik.setValues({
           name: usuario.name || "",
+          lastname: usuario.lastname || "",
           email: usuario.email,
-          roles: usuario.roles?.map((r) => r.id) || [],
+          roles:
+            usuario.role && typeof usuario.role === "object"
+              ? [usuario.role.id]
+              : usuario.roles?.map((r) => r.id) || [],
           isActive: usuario.isActive,
           password: "",
         });
@@ -110,7 +125,7 @@ export function UsuarioDialog({
           </DialogTitle>
           <DialogDescription>
             {isEdit
-              ? `Modifica los datos de ${usuario?.name}.`
+              ? `Modifica los datos de ${[usuario?.name, usuario?.lastname].filter(Boolean).join(" ") || "este usuario"}.`
               : "Completa los campos para crear un nuevo usuario."}
           </DialogDescription>
         </DialogHeader>
@@ -122,30 +137,57 @@ export function UsuarioDialog({
             </div>
           )}
 
-          {/* Nombre */}
-          <div className="space-y-1.5">
-            <Label htmlFor="dlg-name" className="text-sm font-medium">
-              Nombre completo
-            </Label>
-            <div className="relative">
-              <UserIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                id="dlg-name"
-                name="name"
-                placeholder="Ej. Ana Rodríguez"
-                value={formik.values.name}
-                onChange={formik.handleChange}
-                onBlur={formik.handleBlur}
-                className={`pl-10 ${
-                  formik.touched.name && formik.errors.name
-                    ? "border-destructive ring-destructive/20"
-                    : ""
-                }`}
-              />
+          {/* Nombre y Apellido */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="dlg-name" className="text-sm font-medium">
+                Nombre
+              </Label>
+              <div className="relative">
+                <UserIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  id="dlg-name"
+                  name="name"
+                  placeholder="Ej. Ana"
+                  value={formik.values.name}
+                  onChange={formik.handleChange}
+                  onBlur={formik.handleBlur}
+                  className={`pl-10 ${
+                    formik.touched.name && formik.errors.name
+                      ? "border-destructive ring-destructive/20"
+                      : ""
+                  }`}
+                />
+              </div>
+              {formik.touched.name && formik.errors.name && (
+                <p className="text-xs text-destructive">{formik.errors.name as string}</p>
+              )}
             </div>
-            {formik.touched.name && formik.errors.name && (
-              <p className="text-xs text-destructive">{formik.errors.name as string}</p>
-            )}
+
+            <div className="space-y-1.5">
+              <Label htmlFor="dlg-lastname" className="text-sm font-medium">
+                Apellido(s)
+              </Label>
+              <div className="relative">
+                <UserIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  id="dlg-lastname"
+                  name="lastname"
+                  placeholder="Ej. Rodríguez"
+                  value={formik.values.lastname || ""}
+                  onChange={formik.handleChange}
+                  onBlur={formik.handleBlur}
+                  className={`pl-10 ${
+                    formik.touched.lastname && formik.errors.lastname
+                      ? "border-destructive ring-destructive/20"
+                      : ""
+                  }`}
+                />
+              </div>
+              {formik.touched.lastname && formik.errors.lastname && (
+                <p className="text-xs text-destructive">{formik.errors.lastname as string}</p>
+              )}
+            </div>
           </div>
 
           {/* Email */}
@@ -190,17 +232,30 @@ export function UsuarioDialog({
               <Input
                 id="dlg-password"
                 name="password"
-                type="password"
+                type={showPassword ? "text" : "password"}
                 placeholder="Mínimo 8 caracteres"
                 value={formik.values.password || ""}
                 onChange={formik.handleChange}
                 onBlur={formik.handleBlur}
-                className={`pl-10 ${
+                className={`pl-10 pr-10 ${
                   formik.touched.password && formik.errors.password
                     ? "border-destructive ring-destructive/20"
                     : ""
                 }`}
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword((prev) => !prev)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground focus:outline-none transition-colors"
+                tabIndex={-1}
+                aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+              >
+                {showPassword ? (
+                  <EyeOffIcon className="h-4 w-4" />
+                ) : (
+                  <EyeIcon className="h-4 w-4" />
+                )}
+              </button>
             </div>
             {formik.touched.password && formik.errors.password && (
               <p className="text-xs text-destructive">{formik.errors.password as string}</p>
@@ -251,7 +306,7 @@ export function UsuarioDialog({
             <Button
               type="submit"
               disabled={formik.isSubmitting}
-              className="gap-2 bg-gradient-to-r from-violet-600 to-indigo-600 text-white hover:from-violet-500 hover:to-indigo-500"
+              className="gap-2 bg-sidebar hover:bg-sidebar-accent text-white shadow-sm"
             >
               {formik.isSubmitting && (
                 <LoaderCircleIcon className="h-4 w-4 animate-spin" />

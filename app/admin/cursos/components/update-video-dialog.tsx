@@ -41,6 +41,7 @@ export function UpdateVideoDialog({
   const [isDragging, setIsDragging] = useState(false);
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [progress, setProgress] = useState<number>(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [prevOpen, setPrevOpen] = useState(open);
@@ -67,13 +68,13 @@ export function UpdateVideoDialog({
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+    if (e.dataTransfer.files) {
       handleFileSelect(e.dataTransfer.files[0]);
     }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
+    if (e.target.files) {
       handleFileSelect(e.target.files[0]);
     }
   };
@@ -91,6 +92,7 @@ export function UpdateVideoDialog({
   const removeVideo = () => {
     setVideoFile(null);
     setPreviewUrl(currentVideoUrl || null);
+    setProgress(0);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -111,11 +113,13 @@ export function UpdateVideoDialog({
 
     setIsLoading(true);
     setError(null);
+    setProgress(0);
     try {
-      await uploadLessonVideo(lessonId, videoFile);
+      await uploadLessonVideo(lessonId, videoFile, (p) => setProgress(p));
       toast.success("Video de la lección actualizado correctamente");
       onSuccess();
       onOpenChange(false);
+      setProgress(0);
     } catch (e) {
       const errorMessage =
         e instanceof Error ? e.message : "Error al actualizar el video";
@@ -144,13 +148,13 @@ export function UpdateVideoDialog({
         )}
 
         <div className="grid gap-4 py-4">
-          <div className="space-y-2">
+          <div className="space-y-2 w-full min-w-0">
             <Label>Archivo de Video</Label>
             <div
-              className={`relative flex min-h-[140px] flex-col items-center justify-center rounded-xl border-2 border-dashed p-4 transition-colors ${
+              className={`relative flex w-full min-w-0 overflow-hidden min-h-[140px] flex-col items-center justify-center rounded-xl border-2 border-dashed p-4 transition-colors ${
                 isDragging
-                  ? "border-violet-500 bg-violet-500/10"
-                  : "border-border hover:border-violet-500/50 hover:bg-muted/50"
+                  ? "border-sidebar bg-sidebar/10"
+                  : "border-border hover:border-sidebar/50 hover:bg-muted/50"
               }`}
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
@@ -165,12 +169,12 @@ export function UpdateVideoDialog({
               />
 
               {videoFile ? (
-                <div className="flex w-full items-center justify-between rounded-lg bg-muted p-3">
-                  <div className="flex items-center gap-3 overflow-hidden">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-violet-100 text-violet-600 dark:bg-violet-900/30 dark:text-violet-400">
+                <div className="flex w-full min-w-0 items-center justify-between rounded-lg bg-muted p-3">
+                  <div className="flex flex-1 min-w-0 items-center gap-3 overflow-hidden">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-sidebar/10 text-sidebar">
                       <VideoIcon className="h-5 w-5" />
                     </div>
-                    <div className="overflow-hidden">
+                    <div className="min-w-0 flex-1 overflow-hidden">
                       <p className="truncate text-sm font-medium">
                         {videoFile.name}
                       </p>
@@ -192,11 +196,12 @@ export function UpdateVideoDialog({
                   </Button>
                 </div>
               ) : (
-                <div
+                <button
+                  type="button"
                   className="flex cursor-pointer flex-col items-center justify-center text-center w-full h-full"
                   onClick={() => fileInputRef.current?.click()}
                 >
-                  <div className="mb-2 rounded-full bg-violet-100 p-3 text-violet-600 dark:bg-violet-900/30 dark:text-violet-400">
+                  <div className="mb-2 rounded-full bg-sidebar/10 p-3 text-sidebar">
                     <UploadCloudIcon className="h-6 w-6" />
                   </div>
                   <p className="text-sm font-medium text-foreground">
@@ -205,6 +210,21 @@ export function UpdateVideoDialog({
                   <p className="mt-1 text-xs text-muted-foreground">
                     MP4, WEBM o OGG (máx. 500MB)
                   </p>
+                </button>
+              )}
+              {isLoading && progress > 0 && (
+                <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm rounded-xl">
+                  <div className="w-3/4 max-w-sm flex flex-col items-center">
+                    <p className="text-sm font-medium mb-2 text-foreground">
+                      {progress === 100 ? "Procesando video..." : `Subiendo video: ${progress}%`}
+                    </p>
+                    <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-sidebar transition-all duration-300"
+                        style={{ width: `${progress}%` }}
+                      />
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
@@ -213,7 +233,7 @@ export function UpdateVideoDialog({
           {previewUrl && (
             <div className="space-y-2 mt-2 min-w-0 w-full">
               <Label>Previsualización</Label>
-              <div className="w-full overflow-hidden rounded-xl border border-border bg-black">
+              <div className="w-full max-w-full aspect-video overflow-hidden rounded-xl border border-border bg-black">
                 <PlyrPlayer videoUrl={previewUrl} />
               </div>
             </div>
@@ -233,7 +253,7 @@ export function UpdateVideoDialog({
             disabled={
               isLoading || !lessonId || (!videoFile && !currentVideoUrl)
             }
-            className="bg-violet-600 hover:bg-violet-700 text-white"
+            className="bg-sidebar hover:bg-sidebar-accent text-white"
           >
             {isLoading ? "Subiendo..." : "Guardar Video"}
           </Button>

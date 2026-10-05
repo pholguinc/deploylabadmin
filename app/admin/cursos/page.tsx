@@ -29,19 +29,15 @@ import {
   StarIcon,
   EyeIcon,
 } from "lucide-react";
-import {
-  getCourses,
-  deleteCourse,
-} from "./services/courses.service";
-import type {
-  Course,
-  PaginationMeta,
-} from "./interfaces/course.interface";
+import { getCourses, deleteCourse } from "./services/courses.service";
+import type { Course, PaginationMeta } from "./interfaces/course.interface";
 import { CourseDialog } from "./components/course-dialog";
+import { useRole } from "@/hooks/use-role";
 
 const LIMIT = 8;
 
 export default function CursosPage() {
+  const { isAdministrador } = useRole();
   const [data, setData] = useState<Course[]>([]);
   const [meta, setMeta] = useState<PaginationMeta | null>(null);
   const [page, setPage] = useState(1);
@@ -68,7 +64,7 @@ export default function CursosPage() {
     let mounted = true;
     queueMicrotask(() => {
       if (mounted) {
-        load(page);
+        void load(page);
       }
     });
     return () => {
@@ -80,7 +76,7 @@ export default function CursosPage() {
     if (!confirm("¿Eliminar este curso?")) return;
     try {
       await deleteCourse(id);
-      load(page);
+      await load(page);
     } catch (e) {
       alert(e instanceof Error ? e.message : "Error al eliminar");
     }
@@ -96,22 +92,24 @@ export default function CursosPage() {
     if (isLoading) {
       return (
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {Array.from({ length: LIMIT }).map((_, i) => (
-            <div
-              key={`skeleton-${i}`}
-              className="overflow-hidden rounded-xl border border-border/50 bg-card shadow-sm"
-            >
-              <div className="h-40 w-full animate-pulse bg-muted" />
-              <div className="p-4 space-y-4">
-                <div className="h-5 w-3/4 animate-pulse rounded bg-muted" />
-                <div className="flex gap-2">
-                  <div className="h-4 w-16 animate-pulse rounded-full bg-muted" />
-                  <div className="h-4 w-16 animate-pulse rounded-full bg-muted" />
+          {Array.from({ length: LIMIT }, (_, i) => `skeleton-${i}`).map(
+            (skeletonKey) => (
+              <div
+                key={skeletonKey}
+                className="overflow-hidden rounded-xl border border-border/50 bg-card shadow-sm"
+              >
+                <div className="h-40 w-full animate-pulse bg-muted" />
+                <div className="p-4 space-y-4">
+                  <div className="h-5 w-3/4 animate-pulse rounded bg-muted" />
+                  <div className="flex gap-2">
+                    <div className="h-4 w-16 animate-pulse rounded-full bg-muted" />
+                    <div className="h-4 w-16 animate-pulse rounded-full bg-muted" />
+                  </div>
+                  <div className="h-4 w-full animate-pulse rounded bg-muted" />
                 </div>
-                <div className="h-4 w-full animate-pulse rounded bg-muted" />
               </div>
-            </div>
-          ))}
+            ),
+          )}
         </div>
       );
     }
@@ -170,13 +168,9 @@ export default function CursosPage() {
                   <DropdownMenuSeparator />
                   <DropdownMenuItem className="gap-2" asChild>
                     <Link href={`/admin/cursos/${course.id}`}>
-                      <EyeIcon className="h-3.5 w-3.5" />
-                      Ver detalle
+                      <PencilIcon className="h-3.5 w-3.5" />
+                      Editar
                     </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem className="gap-2">
-                    <PencilIcon className="h-3.5 w-3.5" />
-                    Editar
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
@@ -201,13 +195,18 @@ export default function CursosPage() {
                   className="object-cover transition-transform duration-300 group-hover:scale-105"
                 />
               ) : (
-                <div className="flex h-full w-full items-center justify-center bg-violet-100 dark:bg-violet-900/20">
-                  <BookOpenIcon className="h-10 w-10 text-violet-500/50" />
+                <div className="flex h-full w-full items-center justify-center bg-sidebar/10">
+                  <BookOpenIcon className="h-10 w-10 text-sidebar/60" />
                 </div>
               )}
               {!course.isActive && (
                 <div className="absolute inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-                  <Badge variant="outline" className="text-white border-white/20">Inactivo</Badge>
+                  <Badge
+                    variant="outline"
+                    className="text-white border-white/20"
+                  >
+                    Inactivo
+                  </Badge>
                 </div>
               )}
             </div>
@@ -215,7 +214,10 @@ export default function CursosPage() {
             <div className="flex flex-1 flex-col p-5">
               <div className="mb-3 flex flex-wrap gap-2">
                 {course.category && (
-                  <Badge variant="secondary" className="bg-violet-500/10 text-violet-600 hover:bg-violet-500/20">
+                  <Badge
+                    variant="secondary"
+                    className="bg-sidebar/10 text-sidebar hover:bg-sidebar/20"
+                  >
                     {course.category}
                   </Badge>
                 )}
@@ -227,11 +229,11 @@ export default function CursosPage() {
               </div>
 
               <Link href={`/admin/cursos/${course.id}`}>
-                <h3 className="mb-2 font-semibold leading-tight text-foreground line-clamp-2 hover:text-violet-500 transition-colors">
+                <h3 className="mb-2 font-semibold leading-tight text-foreground line-clamp-2 hover:text-sidebar transition-colors">
                   {course.title}
                 </h3>
               </Link>
-              
+
               <p className="mb-4 text-sm text-muted-foreground line-clamp-2">
                 {course.description || "Sin descripción"}
               </p>
@@ -267,13 +269,15 @@ export default function CursosPage() {
             Gestiona los cursos y su contenido.
           </p>
         </div>
-        <Button 
-          className="gap-2 bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-lg shadow-violet-500/25 hover:from-violet-500 hover:to-indigo-500"
-          onClick={() => setIsDialogOpen(true)}
-        >
-          <PlusIcon className="h-4 w-4" />
-          Nuevo curso
-        </Button>
+        {isAdministrador && (
+          <Button
+            className="gap-2 bg-sidebar hover:bg-sidebar-accent text-white shadow-sm"
+            onClick={() => setIsDialogOpen(true)}
+          >
+            <PlusIcon className="h-4 w-4" />
+            Nuevo curso
+          </Button>
+        )}
       </div>
 
       {/* Toolbar */}
@@ -344,7 +348,7 @@ export default function CursosPage() {
                     size="icon"
                     className={`h-8 w-8 ${
                       page === p
-                        ? "bg-gradient-to-r from-violet-600 to-indigo-600 text-white"
+                        ? "bg-sidebar hover:bg-sidebar-accent text-white"
                         : ""
                     }`}
                     disabled={isLoading}

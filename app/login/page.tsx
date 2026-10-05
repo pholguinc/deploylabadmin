@@ -81,7 +81,7 @@ export default function LoginPage() {
         <div className="relative z-10 flex flex-1 flex-col justify-between p-12">
           {/* Logo */}
           <div className="login-fade-in flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 shadow-lg shadow-violet-500/25">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-sidebar text-white shadow-lg">
               <RocketIcon className="h-5 w-5 text-white" />
             </div>
             <span className="text-xl font-bold tracking-tight text-white">
@@ -239,7 +239,7 @@ export default function LoginPage() {
             <Button
               type="submit"
               disabled={isLoading}
-              className="h-11 w-full bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-lg shadow-violet-500/25 transition-all duration-300 hover:from-violet-500 hover:to-indigo-500 hover:shadow-violet-500/40 disabled:opacity-70"
+              className="h-11 w-full bg-sidebar hover:bg-sidebar-accent text-white shadow-lg transition-all duration-300 disabled:opacity-70"
             >
               {isLoading ? (
                 <div className="flex items-center gap-2">

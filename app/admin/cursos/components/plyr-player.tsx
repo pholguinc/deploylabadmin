@@ -110,7 +110,7 @@ export default function PlyrPlayer({ videoUrl }: { videoUrl: string }) {
   return (
     <div
       ref={containerRef}
-      className="w-full rounded-xl overflow-hidden bg-black"
+      className="w-full h-full rounded-xl overflow-hidden bg-black [&>.plyr]:h-full"
     />
   );
 }

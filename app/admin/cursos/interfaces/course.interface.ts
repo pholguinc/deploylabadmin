@@ -57,7 +57,7 @@ export interface Course {
   duration: string | null;
   lessonsCount: number;
   rating: number;
-  instructor: string | null;
+  instructor: { id: string; name?: string | null; lastname?: string | null; email: string; } | null;
   imageUrl: string | null;
   isActive: boolean;
   createdAt: string;
@@ -78,3 +78,17 @@ export interface PaginatedCourses {
   data: Course[];
   meta: PaginationMeta;
 }
+
+export interface CreateCourseDto {
+  title: string;
+  description?: string | null;
+  category?: string | null;
+  level?: string | null;
+  duration?: string | null;
+  instructor?: string;
+  imageUrl?: string | null;
+  isActive?: boolean;
+  features?: string[];
+}
+
+export type UpdateCourseDto = Partial<CreateCourseDto>;

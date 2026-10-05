@@ -150,8 +150,8 @@ export function DocumentViewerDialog({
             <div
               className={`relative flex w-full overflow-hidden min-h-[200px] flex-col items-center justify-center rounded-xl border-2 border-dashed p-6 transition-colors ${
                 isDragging
-                  ? "border-violet-500 bg-violet-500/10"
-                  : "border-border hover:border-violet-500/50 hover:bg-muted/50"
+                  ? "border-sidebar bg-sidebar/10"
+                  : "border-border hover:border-sidebar/50 hover:bg-muted/50"
               }`}
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
@@ -169,7 +169,7 @@ export function DocumentViewerDialog({
                 <div className="flex w-full flex-col gap-4">
                   <div className="flex w-full items-center justify-between gap-2 rounded-lg border border-border bg-background p-3 shadow-sm">
                     <div className="flex items-center gap-3 min-w-0 flex-1">
-                      <div className="shrink-0 rounded-full bg-violet-100 p-2 text-violet-600 dark:bg-violet-900/30 dark:text-violet-400">
+                      <div className="shrink-0 rounded-full bg-sidebar/10 p-2 text-sidebar">
                         <FileIcon className="h-5 w-5" />
                       </div>
                       <div className="min-w-0 flex-1">
@@ -198,7 +198,7 @@ export function DocumentViewerDialog({
                   <Button 
                     onClick={handleConfirmReplace} 
                     disabled={isUploading} 
-                    className="w-full bg-violet-600 hover:bg-violet-700 text-white"
+                    className="w-full bg-sidebar hover:bg-sidebar-accent text-white"
                   >
                     {isUploading ? (
                       <>
@@ -215,7 +215,7 @@ export function DocumentViewerDialog({
                   className="flex cursor-pointer flex-col items-center text-center w-full h-full justify-center"
                   onClick={() => fileInputRef.current?.click()}
                 >
-                  <div className="mb-4 rounded-full bg-violet-100 p-4 text-violet-600 dark:bg-violet-900/30 dark:text-violet-400">
+                  <div className="mb-4 rounded-full bg-sidebar/10 p-4 text-sidebar">
                     <UploadCloudIcon className="h-8 w-8" />
                   </div>
                   <p className="text-base font-medium text-foreground">

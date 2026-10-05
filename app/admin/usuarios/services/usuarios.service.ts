@@ -9,9 +9,14 @@ const BASE = `${process.env.NEXT_PUBLIC_API_URL}/users`;
 
 export async function getUsers(
   page = 1,
-  limit = 10
+  limit = 10,
+  role?: string
 ): Promise<PaginatedUsuarios> {
-  const res = await apiFetch(`${BASE}/list?page=${page}&limit=${limit}`, {
+  let url = `${BASE}/list?page=${page}&limit=${limit}`;
+  if (role) {
+    url += `&role=${encodeURIComponent(role)}`;
+  }
+  const res = await apiFetch(url, {
     cache: "no-store",
   });
   if (!res.ok) throw new Error(`Error ${res.status}: ${await res.text()}`);
@@ -40,7 +45,8 @@ export async function createUser(data: UsuarioFormData): Promise<Usuario> {
     body: JSON.stringify(data),
   });
   if (!res.ok) throw new Error(`Error ${res.status}: ${await res.text()}`);
-  return res.json();
+  const json = await res.json();
+  return json?.data ?? json;
 }
 
 export async function updateUser(
@@ -53,7 +59,8 @@ export async function updateUser(
     body: JSON.stringify(data),
   });
   if (!res.ok) throw new Error(`Error ${res.status}: ${await res.text()}`);
-  return res.json();
+  const json = await res.json();
+  return json?.data ?? json;
 }
 
 export async function updateUserStatus(
@@ -66,5 +73,6 @@ export async function updateUserStatus(
     body: JSON.stringify({ isActive }),
   });
   if (!res.ok) throw new Error(`Error ${res.status}: ${await res.text()}`);
-  return res.json();
+  const json = await res.json();
+  return json?.data ?? json;
 }

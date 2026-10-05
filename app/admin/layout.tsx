@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -40,59 +39,73 @@ import {
 import {
   RocketIcon,
   LayoutDashboardIcon,
-  ServerIcon,
-  BoxIcon,
   UsersIcon,
   SettingsIcon,
-  ActivityIcon,
-  ShieldIcon,
   BellIcon,
   LogOutIcon,
   ChevronsUpDownIcon,
-  DatabaseIcon,
-  GlobeIcon,
-  GitBranchIcon,
-  TerminalIcon,
-  KeyIcon,
   TrophyIcon,
   BookOpenIcon,
+  BarChart3Icon,
 } from "lucide-react";
+import { useAuth } from "@/contexts/auth.context";
+import { useRole } from "@/hooks/use-role";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
 
-const navigationItems = [
+interface NavItem {
+  title: string;
+  icon: React.ComponentType<{ className?: string }>;
+  href: string;
+  adminOnly?: boolean;
+  docenteAllowed?: boolean;
+}
+
+interface NavGroup {
+  group: string;
+  items: NavItem[];
+}
+
+const navigationItems: NavGroup[] = [
   {
-    group: "Overview",
+    group: "Inicio",
+    items: [{ title: "Dashboard", icon: LayoutDashboardIcon, href: "/admin" }],
+  },
+  {
+    group: "Gestión",
     items: [
-      { title: "Dashboard", icon: LayoutDashboardIcon, href: "/admin" },
-      { title: "Activity", icon: ActivityIcon, href: "/admin/activity" },
-      { title: "Analytics", icon: ActivityIcon, href: "/admin/analytics" },
+      {
+        title: "Usuarios",
+        icon: UsersIcon,
+        href: "/admin/usuarios",
+        adminOnly: true,
+      },
+      {
+        title: "Cursos",
+        icon: BookOpenIcon,
+        href: "/admin/cursos",
+        adminOnly: true,
+        docenteAllowed: true,
+      },
+      {
+        title: "Logros",
+        icon: TrophyIcon,
+        href: "/admin/logros",
+        adminOnly: true,
+      },
+      {
+        title: "Reportes",
+        icon: BarChart3Icon,
+        href: "/admin/reportes",
+        adminOnly: true,
+        docenteAllowed: true,
+      },
     ],
   },
   {
-    group: "Infrastructure",
+    group: "Sistema",
     items: [
-      { title: "Servers", icon: ServerIcon, href: "/admin/servers" },
-      { title: "Databases", icon: DatabaseIcon, href: "/admin/databases" },
-      { title: "Domains", icon: GlobeIcon, href: "/admin/domains" },
-      { title: "Deployments", icon: GitBranchIcon, href: "/admin/deployments" },
-    ],
-  },
-  {
-    group: "Management",
-    items: [
-      { title: "Projects", icon: BoxIcon, href: "/admin/projects" },
-      { title: "Usuarios", icon: UsersIcon, href: "/admin/usuarios" },
-      { title: "Logros", icon: TrophyIcon, href: "/admin/logros" },
-      { title: "Cursos", icon: BookOpenIcon, href: "/admin/cursos" },
-      { title: "Team", icon: UsersIcon, href: "/admin/team" },
-      { title: "Security", icon: ShieldIcon, href: "/admin/security" },
-      { title: "API Keys", icon: KeyIcon, href: "/admin/api-keys" },
-    ],
-  },
-  {
-    group: "System",
-    items: [
-      { title: "Console", icon: TerminalIcon, href: "/admin/console" },
-      { title: "Settings", icon: SettingsIcon, href: "/admin/settings" },
+      { title: "Notificaciones", icon: BellIcon, href: "/admin/notificaciones" },
+      { title: "Configuración", icon: SettingsIcon, href: "/admin/configuracion" },
     ],
   },
 ];
@@ -113,6 +126,8 @@ export default function DashboardLayout({
 }) {
   const pathname = usePathname();
   const breadcrumbs = getBreadcrumbs(pathname);
+  const { user, logout } = useAuth();
+  const { isAdministrador, isDocente } = useRole();
 
   return (
     <SidebarProvider>
@@ -123,7 +138,7 @@ export default function DashboardLayout({
             <SidebarMenuItem>
               <SidebarMenuButton size="lg" asChild>
                 <Link href="/admin">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600 shadow-md shadow-violet-500/20">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-sidebar-accent text-white shadow-md">
                     <RocketIcon className="h-4 w-4 text-white" />
                   </div>
                   <div className="flex flex-col gap-0.5 leading-none">
@@ -142,29 +157,43 @@ export default function DashboardLayout({
 
         {/* Navigation */}
         <SidebarContent>
-          {navigationItems.map((group) => (
-            <SidebarGroup key={group.group}>
-              <SidebarGroupLabel>{group.group}</SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {group.items.map((item) => (
-                    <SidebarMenuItem key={item.title}>
-                      <SidebarMenuButton
-                        asChild
-                        isActive={pathname === item.href}
-                        tooltip={item.title}
-                      >
-                        <Link href={item.href}>
-                          <item.icon className="h-4 w-4" />
-                          <span>{item.title}</span>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  ))}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
-          ))}
+          {navigationItems.map((group) => {
+            const itemsToRender = group.items.filter((item) => {
+              if (item.adminOnly && !isAdministrador) {
+                if (item.docenteAllowed && isDocente) {
+                  return true;
+                }
+                return false;
+              }
+              return true;
+            });
+
+            if (itemsToRender.length === 0) return null;
+
+            return (
+              <SidebarGroup key={group.group}>
+                <SidebarGroupLabel>{group.group}</SidebarGroupLabel>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    {itemsToRender.map((item) => (
+                      <SidebarMenuItem key={item.title}>
+                        <SidebarMenuButton
+                          asChild
+                          isActive={pathname === item.href}
+                          tooltip={item.title}
+                        >
+                          <Link href={item.href}>
+                            <item.icon className="h-4 w-4" />
+                            <span>{item.title}</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    ))}
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </SidebarGroup>
+            );
+          })}
         </SidebarContent>
 
         {/* Sidebar Footer - User */}
@@ -178,17 +207,19 @@ export default function DashboardLayout({
                     className="data-[state=open]:bg-sidebar-accent"
                   >
                     <Avatar className="h-8 w-8 rounded-lg">
-                      <AvatarImage src="" alt="Admin" />
+                      <AvatarImage src="" alt={user?.name || "Usuario"} />
                       <AvatarFallback className="rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600 text-xs text-white">
-                        DL
+                        {user?.name
+                          ? user.name.substring(0, 2).toUpperCase()
+                          : "US"}
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex flex-col gap-0.5 leading-none">
                       <span className="truncate text-sm font-semibold">
-                        Admin User
+                        {user?.name || "Usuario"}
                       </span>
                       <span className="truncate text-xs text-muted-foreground">
-                        admin@deploylab.io
+                        {user?.email || ""}
                       </span>
                     </div>
                     <ChevronsUpDownIcon className="ml-auto h-4 w-4 text-muted-foreground" />
@@ -203,29 +234,41 @@ export default function DashboardLayout({
                   <DropdownMenuLabel className="flex items-center gap-2 p-2">
                     <Avatar className="h-8 w-8 rounded-lg">
                       <AvatarFallback className="rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600 text-xs text-white">
-                        DL
+                        {user?.name
+                          ? user.name.substring(0, 2).toUpperCase()
+                          : "US"}
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex flex-col">
-                      <span className="text-sm font-medium">Admin User</span>
+                      <span className="text-sm font-medium">
+                        {user?.name || "Usuario"}
+                      </span>
                       <span className="text-xs text-muted-foreground">
-                        admin@deploylab.io
+                        {user?.email || ""}
                       </span>
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem>
-                    <BellIcon className="mr-2 h-4 w-4" />
-                    Notifications
+                  <DropdownMenuItem asChild>
+                    <Link href="/admin/notificaciones" className="cursor-pointer flex items-center">
+                      <BellIcon className="mr-2 h-4 w-4" />
+                      Notificaciones
+                    </Link>
                   </DropdownMenuItem>
-                  <DropdownMenuItem>
-                    <SettingsIcon className="mr-2 h-4 w-4" />
-                    Settings
+                  <DropdownMenuItem asChild>
+                    <Link href="/admin/configuracion" className="cursor-pointer flex items-center">
+                      <SettingsIcon className="mr-2 h-4 w-4" />
+                      Configuración
+                    </Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem className="text-destructive">
+                  <DropdownMenuItem
+                    className="text-destructive"
+                    onClick={() => logout()}
+                    style={{ cursor: "pointer" }}
+                  >
                     <LogOutIcon className="mr-2 h-4 w-4" />
-                    Sign out
+                    Cerrar sesión
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -237,27 +280,33 @@ export default function DashboardLayout({
       {/* Main Content */}
       <SidebarInset>
         {/* Top bar */}
-        <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
-          <SidebarTrigger className="-ml-1" />
-          <Separator orientation="vertical" className="mr-2 h-4" />
-          <Breadcrumb>
-            <BreadcrumbList>
-              {breadcrumbs.map((crumb, i) => (
-                <span key={crumb.href} className="flex items-center gap-1.5">
-                  {i > 0 && <BreadcrumbSeparator />}
-                  <BreadcrumbItem>
-                    {crumb.isLast ? (
-                      <BreadcrumbPage>{crumb.label}</BreadcrumbPage>
-                    ) : (
-                      <BreadcrumbLink href={crumb.href}>
-                        {crumb.label}
-                      </BreadcrumbLink>
-                    )}
-                  </BreadcrumbItem>
-                </span>
-              ))}
-            </BreadcrumbList>
-          </Breadcrumb>
+        <header className="flex h-14 shrink-0 items-center justify-between border-b px-4 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
+          <div className="flex items-center gap-2">
+            <SidebarTrigger className="-ml-1" />
+            <Separator orientation="vertical" className="mr-2 h-4" />
+            <Breadcrumb>
+              <BreadcrumbList>
+                {breadcrumbs.map((crumb, i) => (
+                  <span key={crumb.href} className="flex items-center gap-1.5">
+                    {i > 0 && <BreadcrumbSeparator />}
+                    <BreadcrumbItem>
+                      {crumb.isLast ? (
+                        <BreadcrumbPage>{crumb.label}</BreadcrumbPage>
+                      ) : (
+                        <BreadcrumbLink href={crumb.href}>
+                          {crumb.label}
+                        </BreadcrumbLink>
+                      )}
+                    </BreadcrumbItem>
+                  </span>
+                ))}
+              </BreadcrumbList>
+            </Breadcrumb>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <NotificationBell />
+          </div>
         </header>
 
         {/* Page content */}

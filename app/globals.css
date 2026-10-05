@@ -73,7 +73,7 @@
   --dl-white:          oklch(1 0 0);
 
   /* Sidebar */
-  --dl-sidebar-bg:     oklch(0.30 0.12 var(--dl-brand-h));
+  --dl-sidebar-bg:     oklch(0.30 0.12 var(--dl-brand-h)); /* azul del sidebar */
   --dl-sidebar-hover:  oklch(0.38 0.14 var(--dl-brand-h));
 
   /* Destructivo */
@@ -91,7 +91,7 @@
   --popover:                 var(--dl-white);
   --popover-foreground:      var(--dl-gray-950);
 
-  --primary:                 var(--dl-brand-500);
+  --primary:                 var(--dl-sidebar-bg);
   --primary-foreground:      var(--dl-white);
 
   --secondary:               var(--dl-gray-100);

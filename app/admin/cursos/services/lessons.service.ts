@@ -1,4 +1,4 @@
-import { apiFetch } from "@/lib/api-client";
+import { apiFetch, uploadFileWithProgress } from "@/lib/api-client";
 import { Lesson, Question } from "../interfaces/course.interface";
 
 const BASE = `${process.env.NEXT_PUBLIC_API_URL}/lessons`;
@@ -32,17 +32,11 @@ export async function updateLesson(lessonId: string, data: { videoUrl?: string; 
   return json?.data ?? json;
 }
 
-export async function uploadLessonVideo(lessonId: string, file: File) {
+export async function uploadLessonVideo(lessonId: string, file: File, onProgress?: (progress: number) => void) {
   const formData = new FormData();
   formData.append("video", file);
 
-  const res = await apiFetch(`${BASE}/${lessonId}/video`, {
-    method: "POST",
-    body: formData,
-  });
-  if (!res.ok) throw new Error(`Error ${res.status}: ${await res.text()}`);
-
-  const json = await res.json();
+  const json = await uploadFileWithProgress(`${BASE}/${lessonId}/video`, formData, onProgress || (() => {}));
   return json?.data ?? json;
 }
 

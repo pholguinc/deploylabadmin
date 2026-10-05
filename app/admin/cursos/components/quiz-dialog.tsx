@@ -319,7 +319,7 @@ export function QuizDialog({
           <Button
             onClick={handleSave}
             disabled={isLoading || !lessonId}
-            className="bg-violet-600 hover:bg-violet-700 text-white"
+            className="bg-sidebar hover:bg-sidebar-accent text-white"
           >
             {isLoading ? "Creando..." : "Crear Examen"}
           </Button>

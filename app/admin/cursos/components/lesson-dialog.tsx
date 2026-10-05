@@ -155,7 +155,7 @@ export function LessonDialog({
           >
             Cancelar
           </Button>
-          <Button onClick={handleSave} disabled={isLoading} className="bg-violet-600 hover:bg-violet-700 text-white">
+          <Button onClick={handleSave} disabled={isLoading} className="bg-sidebar hover:bg-sidebar-accent text-white">
             {isLoading ? "Guardando..." : "Guardar Lección"}
           </Button>
         </DialogFooter>

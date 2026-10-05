@@ -353,7 +353,7 @@ export function LogroDialog({
             <Button
               type="submit"
               disabled={isLoading}
-              className="gap-2 bg-gradient-to-r from-violet-600 to-indigo-600 text-white hover:from-violet-500 hover:to-indigo-500"
+              className="gap-2 bg-sidebar hover:bg-sidebar-accent text-white shadow-sm"
             >
               {isLoading && <LoaderCircleIcon className="h-4 w-4 animate-spin" />}
               {isEdit ? "Guardar cambios" : "Crear logro"}

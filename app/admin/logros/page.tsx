@@ -125,7 +125,7 @@ export default function LogrosPage() {
         </div>
         <Button
           onClick={openCreate}
-          className="gap-2 bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-lg shadow-violet-500/25 hover:from-violet-500 hover:to-indigo-500"
+          className="gap-2 bg-sidebar hover:bg-sidebar-accent text-white shadow-sm"
         >
           <PlusIcon className="h-4 w-4" />
           Nuevo logro
@@ -392,7 +392,7 @@ export default function LogrosPage() {
                       size="icon"
                       className={`h-8 w-8 ${
                         page === p
-                          ? "bg-gradient-to-r from-violet-600 to-indigo-600 text-white"
+                          ? "bg-sidebar hover:bg-sidebar-accent text-white"
                           : ""
                       }`}
                       disabled={isLoading}

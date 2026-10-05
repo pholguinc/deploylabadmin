@@ -100,22 +100,32 @@ export default function UsersPage() {
     load(page);
   };
 
+  const getFullName = (name?: string | null, lastname?: string | null) => {
+    const full = [name, lastname].filter(Boolean).join(" ").trim();
+    return full || "Sin nombre";
+  };
+
   const filtered = search
-    ? data.filter(
-        (u) =>
-          u.name?.toLowerCase().includes(search.toLowerCase()) ||
-          u.email.toLowerCase().includes(search.toLowerCase()),
-      )
+    ? data.filter((u) => {
+        const fullName = `${u.name || ""} ${u.lastname || ""}`.toLowerCase();
+        const term = search.toLowerCase();
+        return (
+          fullName.includes(term) ||
+          u.email.toLowerCase().includes(term)
+        );
+      })
     : data;
 
-  const getInitials = (name?: string | null) => {
-    if (!name) return "U";
-    return name
-      .split(" ")
-      .map((n) => n[0])
-      .slice(0, 2)
-      .join("")
-      .toUpperCase();
+  const getInitials = (name?: string | null, lastname?: string | null) => {
+    const first = name?.trim() ? name.trim().split(" ")[0] : "";
+    const last = lastname?.trim() ? lastname.trim().split(" ")[0] : "";
+    if (first && last) {
+      return (first[0] + last[0]).toUpperCase();
+    }
+    if (first) {
+      return first.slice(0, 2).toUpperCase();
+    }
+    return "U";
   };
 
   const totalPages = meta?.totalPages ?? 1;
@@ -183,13 +193,13 @@ export default function UsersPage() {
         <TableCell>
           <div className="flex items-center gap-3">
             <Avatar className="h-9 w-9">
-              <AvatarFallback className="bg-gradient-to-br from-violet-500/20 to-indigo-500/20 text-xs font-medium text-violet-600 dark:text-violet-300">
-                {getInitials(user.name)}
+              <AvatarFallback className="bg-sidebar/10 text-xs font-medium text-sidebar">
+                {getInitials(user.name, user.lastname)}
               </AvatarFallback>
             </Avatar>
             <div>
               <p className="font-medium leading-none">
-                {user.name || "Sin nombre"}
+                {getFullName(user.name, user.lastname)}
               </p>
               <p className="mt-1 text-xs text-muted-foreground">
                 {user.email}
@@ -199,7 +209,11 @@ export default function UsersPage() {
         </TableCell>
         <TableCell>
           <div className="flex flex-wrap gap-1">
-            {user.roles && user.roles.length > 0 ? (
+            {user.role ? (
+              <Badge variant="secondary" className="text-xs">
+                {typeof user.role === "string" ? user.role : user.role.name}
+              </Badge>
+            ) : user.roles && user.roles.length > 0 ? (
               user.roles.map((r) => (
                 <Badge
                   key={r.id}
@@ -289,7 +303,7 @@ export default function UsersPage() {
           </Button>
           <Button
             onClick={openCreate}
-            className="gap-2 bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-lg shadow-violet-500/25 hover:from-violet-500 hover:to-indigo-500"
+            className="gap-2 bg-sidebar hover:bg-sidebar-accent text-white shadow-sm"
           >
             <PlusIcon className="h-4 w-4" />
             Agregar usuario
@@ -366,7 +380,7 @@ export default function UsersPage() {
                       size="icon"
                       className={`h-8 w-8 ${
                         page === p
-                          ? "bg-gradient-to-r from-violet-600 to-indigo-600 text-white"
+                          ? "bg-sidebar hover:bg-sidebar-accent text-white"
                           : ""
                       }`}
                       disabled={isLoading}

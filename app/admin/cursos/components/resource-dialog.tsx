@@ -165,7 +165,7 @@ export function ResourceDialog({
               <Button
                 type="button"
                 variant={uploadMethod === "FILE" ? "default" : "outline"}
-                className={uploadMethod === "FILE" ? "bg-violet-600 hover:bg-violet-700 text-white flex-1" : "flex-1"}
+                className={uploadMethod === "FILE" ? "bg-sidebar hover:bg-sidebar-accent text-white flex-1" : "flex-1"}
                 onClick={() => setUploadMethod("FILE")}
               >
                 <FileIcon className="w-4 h-4 mr-2" />
@@ -174,7 +174,7 @@ export function ResourceDialog({
               <Button
                 type="button"
                 variant={uploadMethod === "URL" ? "default" : "outline"}
-                className={uploadMethod === "URL" ? "bg-violet-600 hover:bg-violet-700 text-white flex-1" : "flex-1"}
+                className={uploadMethod === "URL" ? "bg-sidebar hover:bg-sidebar-accent text-white flex-1" : "flex-1"}
                 onClick={() => setUploadMethod("URL")}
               >
                 <LinkIcon className="w-4 h-4 mr-2" />
@@ -202,8 +202,8 @@ export function ResourceDialog({
               <div
                 className={`relative flex w-full overflow-hidden min-h-[140px] flex-col items-center justify-center rounded-xl border-2 border-dashed p-4 transition-colors ${
                   isDragging
-                    ? "border-violet-500 bg-violet-500/10"
-                    : "border-border hover:border-violet-500/50 hover:bg-muted/50"
+                    ? "border-sidebar bg-sidebar/10"
+                    : "border-border hover:border-sidebar/50 hover:bg-muted/50"
                 }`}
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
@@ -219,7 +219,7 @@ export function ResourceDialog({
 
                 {file ? (
                   <div className="grid w-full grid-cols-[auto_1fr_auto] items-center gap-3 rounded-lg border border-border bg-background p-3 shadow-sm">
-                    <div className="rounded-full bg-violet-100 p-2 text-violet-600 dark:bg-violet-900/30 dark:text-violet-400">
+                    <div className="rounded-full bg-sidebar/10 p-2 text-sidebar">
                       <FileIcon className="h-5 w-5" />
                     </div>
                     <div className="min-w-0 overflow-hidden">
@@ -245,10 +245,10 @@ export function ResourceDialog({
                 ) : (
                   <button
                     type="button"
-                    className="flex cursor-pointer flex-col items-center text-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 rounded-lg p-2"
+                    className="flex cursor-pointer flex-col items-center text-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar rounded-lg p-2"
                     onClick={() => fileInputRef.current?.click()}
                   >
-                    <div className="mb-2 rounded-full bg-violet-100 p-3 text-violet-600 dark:bg-violet-900/30 dark:text-violet-400">
+                    <div className="mb-2 rounded-full bg-sidebar/10 p-3 text-sidebar">
                       <UploadCloudIcon className="h-6 w-6" />
                     </div>
                     <p className="text-sm font-medium text-foreground">
@@ -272,7 +272,7 @@ export function ResourceDialog({
           >
             Cancelar
           </Button>
-          <Button onClick={handleSave} disabled={isLoading || !lessonId} className="bg-violet-600 hover:bg-violet-700 text-white">
+          <Button onClick={handleSave} disabled={isLoading || !lessonId} className="bg-sidebar hover:bg-sidebar-accent text-white">
             {isLoading ? "Subiendo..." : "Subir Recurso"}
           </Button>
         </DialogFooter>

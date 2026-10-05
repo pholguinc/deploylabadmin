@@ -1,4 +1,5 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,20 +10,23 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogDescription,
 } from "@/components/ui/dialog";
-import { UploadCloudIcon, XIcon, PlusIcon } from "lucide-react";
+
+import { UploadCloudIcon, XIcon, PlusIcon, SearchIcon, BookIcon } from "lucide-react";
 import {
   createCourse,
   uploadCourseImage,
   updateCourse,
 } from "../services/courses.service";
-import type { Course } from "../interfaces/course.interface";
+import type { Course, CreateCourseDto } from "../interfaces/course.interface";
+import { InstructorModal } from "./instructor-modal";
 
 interface CourseDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onSuccess: () => void;
-  course?: Course | null;
+  readonly open: boolean;
+  readonly onOpenChange: (open: boolean) => void;
+  readonly onSuccess: () => void;
+  readonly course?: Course | null;
 }
 
 export function CourseDialog({
@@ -33,6 +37,9 @@ export function CourseDialog({
 }: CourseDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const [isInstructorModalOpen, setIsInstructorModalOpen] = useState(false);
+  const [instructorName, setInstructorName] = useState("");
 
   // Drag and drop state
   const [isDragging, setIsDragging] = useState(false);
@@ -47,7 +54,7 @@ export function CourseDialog({
     level: string;
     duration: string;
     instructor: string;
-    features: string[];
+    features: { id: string; value: string }[];
     isActive: boolean;
   }>({
     title: "",
@@ -56,29 +63,29 @@ export function CourseDialog({
     level: "",
     duration: "",
     instructor: "",
-    features: [""],
+    features: [{ id: crypto.randomUUID(), value: "" }],
     isActive: true,
   });
 
   const handleFeatureChange = (index: number, value: string) => {
     const newFeatures = [...formData.features];
-    newFeatures[index] = value;
+    newFeatures[index] = { ...newFeatures[index], value };
     setFormData((prev) => ({ ...prev, features: newFeatures }));
   };
 
   const addFeature = () => {
-    setFormData((prev) => ({ ...prev, features: [...prev.features, ""] }));
+    setFormData((prev) => ({ ...prev, features: [...prev.features, { id: crypto.randomUUID(), value: "" }] }));
   };
 
   const removeFeature = (index: number) => {
     const newFeatures = formData.features.filter((_, i) => i !== index);
-    if (newFeatures.length === 0) newFeatures.push("");
+    if (newFeatures.length === 0) newFeatures.push({ id: crypto.randomUUID(), value: "" });
     setFormData((prev) => ({ ...prev, features: newFeatures }));
   };
 
   const handleChange = <K extends keyof typeof formData>(
     field: K,
-    value: typeof formData[K]
+    value: (typeof formData)[K],
   ) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
@@ -86,38 +93,44 @@ export function CourseDialog({
   const [prevOpen, setPrevOpen] = useState(open);
   const [prevCourse, setPrevCourse] = useState(course);
 
+  const resetForm = (courseData?: Course | null) => {
+    if (courseData) {
+      setFormData({
+        title: courseData.title || "",
+        description: courseData.description || "",
+        category: courseData.category || "",
+        level: courseData.level || "",
+        duration: courseData.duration || "",
+        instructor: courseData.instructor?.id || "",
+        features: courseData.features?.length ? courseData.features.map(f => ({ id: crypto.randomUUID(), value: f })) : [{ id: crypto.randomUUID(), value: "" }],
+        isActive: courseData.isActive ?? true,
+      });
+      setImagePreview(courseData.imageUrl || null);
+      setImageFile(null);
+      setInstructorName(courseData.instructor ? `${courseData.instructor.name || ''} ${courseData.instructor.lastname || ''}`.trim() : "");
+    } else {
+      setFormData({
+        title: "",
+        description: "",
+        category: "",
+        level: "",
+        duration: "",
+        instructor: "",
+        features: [{ id: crypto.randomUUID(), value: "" }],
+        isActive: true,
+      });
+      setImagePreview(null);
+      setImageFile(null);
+      setInstructorName("");
+    }
+    setError(null);
+  };
+
   if (open !== prevOpen || course !== prevCourse) {
     setPrevOpen(open);
     setPrevCourse(course);
     if (open) {
-      if (course) {
-        setFormData({
-          title: course.title || "",
-          description: course.description || "",
-          category: course.category || "",
-          level: course.level || "",
-          duration: course.duration || "",
-          instructor: course.instructor || "",
-          features: course.features && course.features.length > 0 ? course.features : [""],
-          isActive: course.isActive ?? true,
-        });
-        setImagePreview(course.imageUrl || null);
-        setImageFile(null);
-      } else {
-        setFormData({
-          title: "",
-          description: "",
-          category: "",
-          level: "",
-          duration: "",
-          instructor: "",
-          features: [""],
-          isActive: true,
-        });
-        setImagePreview(null);
-        setImageFile(null);
-      }
-      setError(null);
+      resetForm(course);
     }
   }
 
@@ -172,14 +185,20 @@ export function CourseDialog({
     setIsLoading(true);
     setError(null);
     try {
-      const payload = {
-        ...formData,
+      const payload: CreateCourseDto = {
+        title: formData.title,
+        description: formData.description || null,
+        category: formData.category || null,
+        level: formData.level || null,
+        duration: formData.duration || null,
+        instructor: formData.instructor || undefined,
+        isActive: formData.isActive,
         features: formData.features
-          .map((f) => f.trim())
+          .map((f) => f.value.trim())
           .filter((f) => f !== ""),
       };
 
-      let savedCourse;
+      let savedCourse: Course;
       if (course) {
         savedCourse = await updateCourse(course.id, payload);
       } else {
@@ -200,8 +219,7 @@ export function CourseDialog({
         level: "",
         duration: "",
         instructor: "",
-        instructor: "",
-        features: [""],
+        features: [{ id: crypto.randomUUID(), value: "" }],
         isActive: true,
       });
       removeImage();
@@ -214,15 +232,23 @@ export function CourseDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[1000px]">
         <DialogHeader>
-          <DialogTitle>
+          <DialogTitle className="flex items-center gap-2 text-xl">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600">
+              <BookIcon className="h-4 w-4 text-white" />
+            </div>
             {course ? "Editar Curso" : "Registrar Nuevo Curso"}
           </DialogTitle>
+          <DialogDescription>
+            {course
+              ? `Modifica los datos del curso ${course.title}.`
+              : "Completa los campos para registrar un nuevo curso."}
+          </DialogDescription>
         </DialogHeader>
 
         {error && (
-          <div className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
+          <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
             {error}
           </div>
         )}
@@ -281,21 +307,32 @@ export function CourseDialog({
             </div>
             <div className="space-y-2">
               <Label htmlFor="instructor">Instructor</Label>
-              <Input
-                id="instructor"
-                value={formData.instructor}
-                onChange={(e) => handleChange("instructor", e.target.value)}
-                placeholder="Nombre del instructor"
-              />
+              <div className="flex items-center gap-2">
+                <Input
+                  readOnly
+                  tabIndex={-1}
+                  value={instructorName || formData.instructor || ""}
+                  placeholder="Ninguno seleccionado"
+                  className="bg-muted focus-visible:ring-0 focus-visible:ring-offset-0 cursor-default"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsInstructorModalOpen(true)}
+                >
+                  <SearchIcon className="h-4 w-4 mr-2" />
+                  Buscar
+                </Button>
+              </div>
             </div>
           </div>
 
           <div className="space-y-2">
             <Label>Características principales</Label>
-            {formData.features.map((feature, index) => (
-              <div key={index} className="flex items-center gap-2">
+            {formData.features.map((featureObj, index) => (
+              <div key={featureObj.id} className="flex items-center gap-2">
                 <Input
-                  value={feature}
+                  value={featureObj.value}
                   onChange={(e) => handleFeatureChange(index, e.target.value)}
                   placeholder="Ej. Certificado al finalizar"
                 />
@@ -305,7 +342,7 @@ export function CourseDialog({
                   size="icon"
                   className="h-9 w-9 shrink-0 text-muted-foreground hover:text-destructive"
                   onClick={() => removeFeature(index)}
-                  disabled={formData.features.length === 1 && !feature}
+                  disabled={formData.features.length === 1 && !featureObj.value}
                 >
                   <XIcon className="h-4 w-4" />
                 </Button>
@@ -328,8 +365,8 @@ export function CourseDialog({
             <div
               className={`relative flex min-h-[140px] flex-col items-center justify-center rounded-xl border-2 border-dashed p-4 transition-colors ${
                 isDragging
-                  ? "border-violet-500 bg-violet-500/10"
-                  : "border-border hover:border-violet-500/50 hover:bg-muted/50"
+                  ? "border-sidebar bg-sidebar/10"
+                  : "border-border hover:border-sidebar/50 hover:bg-muted/50"
               }`}
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
@@ -344,11 +381,13 @@ export function CourseDialog({
               />
 
               {imagePreview ? (
-                <div className="relative w-full overflow-hidden rounded-lg">
-                  <img
+                <div className="relative h-32 w-full overflow-hidden rounded-lg">
+                  <Image
                     src={imagePreview}
                     alt="Preview"
-                    className="h-32 w-full object-cover"
+                    fill
+                    className="object-cover"
+                    unoptimized
                   />
                   <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity hover:opacity-100">
                     <Button
@@ -366,11 +405,12 @@ export function CourseDialog({
                   </div>
                 </div>
               ) : (
-                <div
-                  className="flex cursor-pointer flex-col items-center text-center"
+                <button
+                  type="button"
+                  className="flex cursor-pointer flex-col items-center text-center w-full"
                   onClick={() => fileInputRef.current?.click()}
                 >
-                  <div className="mb-2 rounded-full bg-violet-100 p-3 text-violet-600 dark:bg-violet-900/30 dark:text-violet-400">
+                  <div className="mb-2 rounded-full bg-sidebar/10 p-3 text-sidebar">
                     <UploadCloudIcon className="h-6 w-6" />
                   </div>
                   <p className="text-sm font-medium text-foreground">
@@ -379,7 +419,7 @@ export function CourseDialog({
                   <p className="mt-1 text-xs text-muted-foreground">
                     JPG, PNG o WEBP (máx. 5MB)
                   </p>
-                </div>
+                </button>
               )}
             </div>
           </div>
@@ -409,12 +449,22 @@ export function CourseDialog({
           <Button
             onClick={handleSave}
             disabled={isLoading}
-            className="bg-violet-600 hover:bg-violet-700 text-white"
+            className="bg-sidebar hover:bg-sidebar-accent text-white"
           >
             {isLoading ? "Guardando..." : "Guardar Curso"}
           </Button>
         </DialogFooter>
       </DialogContent>
+
+      <InstructorModal
+        open={isInstructorModalOpen}
+        onOpenChange={setIsInstructorModalOpen}
+        selectedInstructorId={formData.instructor}
+        onSelect={(id, name) => {
+          handleChange("instructor", id);
+          setInstructorName(name);
+        }}
+      />
     </Dialog>
   );
 }

@@ -196,7 +196,7 @@ export function QuestionDialog({
           <Button
             onClick={handleSave}
             disabled={isLoading || !quizId}
-            className="bg-violet-600 hover:bg-violet-700 text-white"
+            className="bg-sidebar hover:bg-sidebar-accent text-white"
           >
             {isLoading ? "Guardando..." : "Guardar Pregunta"}
           </Button>

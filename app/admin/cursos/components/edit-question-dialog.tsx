@@ -174,7 +174,7 @@ export function EditQuestionDialog({
           <Button
             onClick={handleSave}
             disabled={isLoading}
-            className="bg-violet-600 hover:bg-violet-700 text-white"
+            className="bg-sidebar hover:bg-sidebar-accent text-white"
           >
             {isLoading ? "Guardando..." : "Guardar Cambios"}
           </Button>

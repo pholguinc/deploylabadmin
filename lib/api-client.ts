@@ -88,3 +88,60 @@ export async function apiFetch(
 
   return response;
 }
+
+/**
+ * Utility to upload files with progress tracking using XMLHttpRequest
+ */
+export function uploadFileWithProgress(
+  endpoint: string,
+  formData: FormData,
+  onProgress: (progress: number) => void,
+): Promise<any> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    const token = getCookie("accessToken");
+
+    const url = endpoint.startsWith("http")
+      ? endpoint
+      : `${BASE_API_URL}${endpoint.startsWith("/") ? endpoint : `/${endpoint}`}`;
+
+    xhr.open("POST", url, true);
+
+    if (token) {
+      xhr.setRequestHeader("Authorization", `Bearer ${token}`);
+    }
+
+    xhr.upload.onprogress = (event) => {
+      if (event.lengthComputable) {
+        const percentComplete = Math.round((event.loaded / event.total) * 100);
+        onProgress(percentComplete);
+      }
+    };
+
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        try {
+          const response = JSON.parse(xhr.responseText);
+          resolve(response);
+        } catch (e) {
+          resolve(xhr.responseText);
+        }
+      } else {
+        if (xhr.status === 401) {
+          deleteCookie("accessToken");
+          deleteCookie("refreshToken");
+          if (
+            typeof window !== "undefined" &&
+            window.location.pathname !== "/login"
+          ) {
+            window.dispatchEvent(new CustomEvent("unauthorized"));
+          }
+        }
+        reject(new Error(`Error ${xhr.status}: ${xhr.responseText}`));
+      }
+    };
+
+    xhr.onerror = () => reject(new Error("Network Error"));
+    xhr.send(formData);
+  });
+}

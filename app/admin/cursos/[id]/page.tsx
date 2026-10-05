@@ -3,7 +3,13 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
-import { getCourseById, updateModule } from "../services/courses.service";
+import {
+  getCourseById,
+  updateModule,
+  deleteModule,
+  getFinalExam,
+  type FinalExamConfig,
+} from "../services/courses.service";
 import {
   deleteResource,
   deleteQuiz,
@@ -43,6 +49,7 @@ import {
   CheckCircleIcon,
   GripVerticalIcon,
   Loader2Icon,
+  AwardIcon,
 } from "lucide-react";
 import {
   DragDropContext,
@@ -61,6 +68,7 @@ import { EditQuestionDialog } from "../components/edit-question-dialog";
 import { VideoPlayerDialog } from "../components/video-player-dialog";
 import { DocumentViewerDialog } from "../components/document-viewer-dialog";
 import { UpdateVideoDialog } from "../components/update-video-dialog";
+import { FinalExamDialog } from "../components/final-exam-dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -80,7 +88,7 @@ import { toast } from "sonner";
 const renderIconForLessonType = (type: string) => {
   switch (type.toUpperCase()) {
     case "VIDEO":
-      return <VideoIcon className="h-4 w-4 text-violet-500" />;
+      return <VideoIcon className="h-4 w-4 text-sidebar" />;
     case "PDF":
       return <FileTextIcon className="h-4 w-4 text-rose-500" />;
     case "QUIZ":
@@ -138,6 +146,7 @@ interface ModuleItemProps extends Omit<LessonItemProps, "lesson" | "lIndex"> {
   mIndex: number;
   setSelectedModuleId: (id: string | null) => void;
   setIsLessonDialogOpen: (open: boolean) => void;
+  handleDeleteModule: (moduleId: string) => Promise<void>;
   provided?: DraggableProvided;
 }
 
@@ -163,7 +172,7 @@ const QuestionItem = ({
         <Button
           variant="ghost"
           size="icon"
-          className="h-5 w-5 text-muted-foreground hover:text-violet-600"
+          className="h-5 w-5 text-muted-foreground hover:text-sidebar"
           onClick={() => {
             setSelectedQuestion(q);
             setIsEditQuestionDialogOpen(true);
@@ -216,7 +225,7 @@ const QuizItem = ({
         <Button
           variant="ghost"
           size="icon"
-          className="h-6 w-6 text-muted-foreground hover:text-violet-600 shrink-0"
+          className="h-6 w-6 text-muted-foreground hover:text-sidebar shrink-0"
           title="Agregar pregunta"
           onClick={() => {
             setSelectedQuizId(quiz.id);
@@ -383,19 +392,19 @@ const LessonItem = ({
       >
         <div className="flex items-center gap-4">
           <div
-            className="cursor-grab hover:text-violet-600 text-muted-foreground/40 active:cursor-grabbing p-1"
+            className="cursor-grab hover:text-sidebar text-muted-foreground/40 active:cursor-grabbing p-1"
             {...provided?.dragHandleProps}
             onClick={(e) => e.stopPropagation()}
           >
           <GripVerticalIcon className="h-4 w-4" />
         </div>
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-violet-100 dark:bg-violet-900/30 transition-transform group-hover:scale-110">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-sidebar/10 transition-transform group-hover:scale-110">
           {renderIconForLessonType(lesson.type)}
         </div>
         <div>
           <button
             type="button"
-            className="font-medium text-foreground transition-colors group-hover:text-violet-600 dark:group-hover:text-violet-400 cursor-pointer hover:underline text-left"
+            className="font-medium text-foreground transition-colors group-hover:text-sidebar cursor-pointer hover:underline text-left"
             onClick={() => {
               setVideoLesson({
                 title: lesson.title,
@@ -471,7 +480,7 @@ const LessonItem = ({
         <Button
           variant="ghost"
           size="sm"
-          className="h-8 w-8 p-0 text-muted-foreground hover:text-violet-600 dark:hover:text-violet-400"
+          className="h-8 w-8 p-0 text-muted-foreground hover:text-sidebar"
           onClick={() => setIsExpanded(!isExpanded)}
         >
           {isExpanded ? (
@@ -492,10 +501,10 @@ const LessonItem = ({
             Video Principal
           </p>
           <div className="flex items-center gap-2 text-sm text-muted-foreground pl-1 py-0.5 rounded hover:bg-muted/30 transition-colors">
-            <PlayCircleIcon className="h-3.5 w-3.5 text-violet-500 shrink-0" />
+            <PlayCircleIcon className="h-3.5 w-3.5 text-sidebar shrink-0" />
             <button
               type="button"
-              className="hover:text-violet-600 dark:hover:text-violet-400 hover:underline transition-colors truncate text-left cursor-pointer"
+              className="hover:text-sidebar hover:underline transition-colors truncate text-left cursor-pointer"
               onClick={() => {
                 setVideoLesson({
                   title: lesson.title,
@@ -509,7 +518,7 @@ const LessonItem = ({
             <Button
               variant="ghost"
               size="icon"
-              className="h-6 w-6 opacity-0 group-hover/video:opacity-100 transition-opacity text-muted-foreground hover:text-violet-600 shrink-0 ml-auto"
+              className="h-6 w-6 opacity-0 group-hover/video:opacity-100 transition-opacity text-muted-foreground hover:text-sidebar shrink-0 ml-auto"
               title="Actualizar video"
               onClick={() => {
                 setSelectedLessonId(lesson.id);
@@ -584,6 +593,7 @@ const ModuleItem = ({
   mIndex,
   setSelectedModuleId,
   setIsLessonDialogOpen,
+  handleDeleteModule,
   provided,
   ...lessonProps
 }: ModuleItemProps) => {
@@ -602,13 +612,13 @@ const ModuleItem = ({
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-2">
             <div
-              className="cursor-grab hover:text-violet-600 text-muted-foreground/40 active:cursor-grabbing p-1 -ml-2"
+              className="cursor-grab hover:text-sidebar text-muted-foreground/40 active:cursor-grabbing p-1 -ml-2"
               {...provided?.dragHandleProps}
               onClick={(e) => e.stopPropagation()}
             >
               <GripVerticalIcon className="h-5 w-5" />
             </div>
-            <span className="text-xs font-semibold tracking-wider text-violet-600 dark:text-violet-400 uppercase">
+            <span className="text-xs font-semibold tracking-wider text-sidebar uppercase">
               Módulo {(module.order ?? mIndex) + 1}
             </span>
           </div>
@@ -623,7 +633,7 @@ const ModuleItem = ({
           <Button
             variant="ghost"
             size="sm"
-            className="h-8 gap-1 text-xs text-muted-foreground hover:text-violet-600 dark:hover:text-violet-400"
+            className="h-8 gap-1 text-xs text-muted-foreground hover:text-sidebar"
             onClick={() => {
               setSelectedModuleId(module.id);
               setIsLessonDialogOpen(true);
@@ -635,7 +645,20 @@ const ModuleItem = ({
           <Button
             variant="ghost"
             size="sm"
-            className="h-8 w-8 p-0 text-muted-foreground hover:text-violet-600 dark:hover:text-violet-400"
+            className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive dark:hover:text-destructive"
+            onClick={async (e) => {
+              e.stopPropagation();
+              if (window.confirm("¿Estás seguro de que quieres eliminar este módulo?")) {
+                await handleDeleteModule(module.id);
+              }
+            }}
+          >
+            <Trash2Icon className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0 text-muted-foreground hover:text-sidebar"
             onClick={() => setIsExpanded(!isExpanded)}
           >
             {isExpanded ? (
@@ -717,6 +740,8 @@ export default function CourseDetailPage() {
   } | null>(null);
 
   const [isDocumentDialogOpen, setIsDocumentDialogOpen] = useState(false);
+  const [isFinalExamDialogOpen, setIsFinalExamDialogOpen] = useState(false);
+  const [finalExam, setFinalExam] = useState<FinalExamConfig | null>(null);
   const [selectedDocument, setSelectedDocument] = useState<{
     id?: string;
     title: string;
@@ -726,8 +751,12 @@ export default function CourseDetailPage() {
   const load = useCallback(async () => {
     setIsRefreshing(true);
     try {
-      const data = await getCourseById(courseId);
+      const [data, examData] = await Promise.all([
+        getCourseById(courseId),
+        getFinalExam(courseId).catch(() => null),
+      ]);
       setCourse(data);
+      setFinalExam(examData);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al cargar el curso");
     } finally {
@@ -744,6 +773,17 @@ export default function CourseDetailPage() {
       fetchCourse();
     }
   }, [courseId, load]);
+
+  const handleDeleteModule = async (moduleId: string) => {
+    if (!course) return;
+    try {
+      await deleteModule(course.id, moduleId);
+      toast.success("Módulo eliminado correctamente");
+      load();
+    } catch (error) {
+      toast.error("Error al eliminar el módulo");
+    }
+  };
 
   const handleDragEnd = async (result: DropResult) => {
     const { source, destination, type } = result;
@@ -877,7 +917,7 @@ export default function CourseDetailPage() {
           variant="outline"
           size="icon"
           onClick={() => router.back()}
-          className="h-10 w-10 shrink-0 rounded-full transition-colors hover:bg-violet-500/10 hover:text-violet-600"
+          className="h-10 w-10 shrink-0 rounded-full transition-colors hover:bg-sidebar/10 hover:text-sidebar"
         >
           <ChevronLeftIcon className="h-5 w-5" />
         </Button>
@@ -893,6 +933,25 @@ export default function CourseDetailPage() {
           </p>
         </div>
         <div className="ml-auto flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setIsFinalExamDialogOpen(true)}
+            className={`gap-2 ${
+              finalExam
+                ? "border-emerald-500/20 hover:bg-emerald-500/10 text-emerald-600"
+                : "border-sidebar/20 hover:bg-sidebar/10 text-sidebar"
+            }`}
+          >
+            {finalExam ? (
+              <>
+                <PencilIcon className="h-4 w-4" /> Editar Examen Final
+              </>
+            ) : (
+              <>
+                <AwardIcon className="h-4 w-4" /> Configurar Examen Final
+              </>
+            )}
+          </Button>
           <Button onClick={() => setIsCourseDialogOpen(true)}>
             <PencilIcon className="mr-2 h-4 w-4" /> Editar Curso
           </Button>
@@ -902,8 +961,8 @@ export default function CourseDetailPage() {
       {/* Hero Section */}
       <div className="relative overflow-hidden rounded-3xl border border-border/50 bg-card shadow-sm">
         <div className="absolute inset-0 z-0 opacity-10 blur-3xl">
-          <div className="absolute -left-10 -top-10 h-64 w-64 rounded-full bg-violet-500" />
-          <div className="absolute -bottom-10 right-10 h-64 w-64 rounded-full bg-indigo-500" />
+          <div className="absolute -left-10 -top-10 h-64 w-64 rounded-full bg-sidebar" />
+          <div className="absolute -bottom-10 right-10 h-64 w-64 rounded-full bg-sidebar" />
         </div>
 
         <div className="relative z-10 grid gap-8 p-8 md:grid-cols-[1fr_300px] lg:grid-cols-[1fr_400px]">
@@ -911,7 +970,7 @@ export default function CourseDetailPage() {
           <div className="flex flex-col justify-center space-y-6">
             <div className="flex flex-wrap items-center gap-3">
               {course.category && (
-                <Badge className="bg-gradient-to-r from-violet-600 to-indigo-600 px-3 py-1 font-medium text-white shadow-sm border-none">
+                <Badge className="bg-sidebar px-3 py-1 font-medium text-white shadow-sm border-none">
                   {course.category}
                 </Badge>
               )}
@@ -947,7 +1006,7 @@ export default function CourseDetailPage() {
                   <ul className="space-y-1.5">
                     {course.features.map((feature, i) => (
                       <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
-                        <CheckCircleIcon className="h-4 w-4 text-violet-500 shrink-0 mt-0.5" />
+                        <CheckCircleIcon className="h-4 w-4 text-sidebar shrink-0 mt-0.5" />
                         <span>{feature}</span>
                       </li>
                     ))}
@@ -986,26 +1045,27 @@ export default function CourseDetailPage() {
                   <UserIcon className="h-3 w-3" /> Instructor
                 </p>
                 <p className="font-semibold text-foreground truncate">
-                  {course.instructor || "Sin asignar"}
+                  {course.instructor ? `${course.instructor.name || ''} ${course.instructor.lastname || ''}`.trim() || course.instructor.email : "Sin asignar"}
                 </p>
               </div>
             </div>
           </div>
 
           {/* Image */}
-          <div className="relative aspect-video w-full overflow-hidden rounded-2xl shadow-xl shadow-black/5 ring-1 ring-black/5 dark:ring-white/5 md:aspect-auto md:h-full">
+          <div className="relative aspect-video w-full overflow-hidden rounded-2xl shadow-xl shadow-black/5 ring-1 ring-black/5 dark:ring-white/5 self-center">
             {course.imageUrl ? (
               <Image
                 src={course.imageUrl}
                 alt={course.title}
                 fill
                 priority
+                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                 className="object-cover transition-transform duration-500 hover:scale-105"
               />
             ) : (
-              <div className="flex h-full w-full flex-col items-center justify-center bg-violet-50 dark:bg-violet-950/30">
-                <BookOpenIcon className="mb-2 h-16 w-16 text-violet-300 dark:text-violet-700" />
-                <span className="text-sm font-medium text-violet-400 dark:text-violet-600">
+              <div className="flex h-full w-full flex-col items-center justify-center bg-sidebar/5">
+                <BookOpenIcon className="mb-2 h-16 w-16 text-sidebar/40" />
+                <span className="text-sm font-medium text-sidebar/70">
                   Sin imagen de portada
                 </span>
               </div>
@@ -1019,7 +1079,7 @@ export default function CourseDetailPage() {
         <div className="mb-6 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <h3 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
-              <ListIcon className="h-6 w-6 text-violet-500" />
+              <ListIcon className="h-6 w-6 text-sidebar" />
               Contenido del Curso
             </h3>
             <Badge variant="outline" className="text-sm px-3 py-1">
@@ -1028,7 +1088,7 @@ export default function CourseDetailPage() {
           </div>
           <Button
             size="sm"
-            className="gap-2 bg-violet-100 text-violet-700 hover:bg-violet-200 dark:bg-violet-900/30 dark:text-violet-300 dark:hover:bg-violet-900/50"
+            className="gap-2 bg-sidebar text-white hover:bg-sidebar-accent shadow-sm"
             onClick={() => setIsModuleDialogOpen(true)}
           >
             <PlusIcon className="h-4 w-4" />
@@ -1056,6 +1116,7 @@ export default function CourseDetailPage() {
                           module={module}
                           mIndex={mIndex}
                           setSelectedModuleId={setSelectedModuleId}
+                          handleDeleteModule={handleDeleteModule}
                           provided={provided}
                           {...lessonProps}
                         />
@@ -1081,6 +1142,66 @@ export default function CourseDetailPage() {
             </Button>
           </div>
         )}
+
+        {/* Final Exam Section Card */}
+        <div
+          className="mt-8 rounded-2xl border p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4 border-sidebar/20 bg-gradient-to-r from-sidebar/10 via-sidebar/5 to-transparent"
+        >
+          <div className="flex items-center gap-4">
+            <div className="h-12 w-12 rounded-2xl text-white flex items-center justify-center shadow-md shrink-0 bg-sidebar shadow-sidebar/20">
+              <AwardIcon className="h-6 w-6" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h4 className="text-lg font-bold text-foreground">
+                  Examen Final de Certificación
+                </h4>
+                {finalExam ? (
+                  <Badge
+                    variant="outline"
+                    className="text-xs bg-sidebar/10 text-sidebar border-sidebar/20 font-semibold"
+                  >
+                    Registrado ({finalExam.questions?.length || 0} preguntas)
+                  </Badge>
+                ) : (
+                  <Badge
+                    variant="outline"
+                    className="text-xs bg-muted text-muted-foreground font-semibold"
+                  >
+                    Pendiente de Configurar
+                  </Badge>
+                )}
+                <Badge
+                  variant="outline"
+                  className="text-xs bg-muted text-muted-foreground"
+                >
+                  Aprobación: 15 / 20 pts
+                </Badge>
+              </div>
+              <p className="text-sm text-muted-foreground mt-0.5">
+                {finalExam
+                  ? `Examen registrado con ${finalExam.questions?.length || 0} preguntas. Haz clic en "Editar Examen Final" para modificar preguntas, alternativas o eliminarlo.`
+                  : "Este curso aún no tiene examen final. Los estudiantes necesitan aprobarlo con mínimo 15/20 para obtener el certificado."}
+              </p>
+            </div>
+          </div>
+          <Button
+            onClick={() => setIsFinalExamDialogOpen(true)}
+            className="shrink-0 gap-2 text-white bg-sidebar hover:bg-sidebar-accent shadow-sm"
+          >
+            {finalExam ? (
+              <>
+                <PencilIcon className="h-4 w-4" />
+                Editar Examen Final
+              </>
+            ) : (
+              <>
+                <AwardIcon className="h-4 w-4" />
+                Configurar Examen Final
+              </>
+            )}
+          </Button>
+        </div>
       </div>
 
       <CourseDialog
@@ -1165,6 +1286,16 @@ export default function CourseDetailPage() {
         resourceId={selectedDocument?.id}
         onSuccess={load}
       />
+
+      {course && (
+        <FinalExamDialog
+          courseId={course.id}
+          courseTitle={course.title}
+          open={isFinalExamDialogOpen}
+          onOpenChange={setIsFinalExamDialogOpen}
+          onSuccess={load}
+        />
+      )}
     </div>
   );
 }
